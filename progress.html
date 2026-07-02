@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Achievements — Lomon Doctorate Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="kicker">XP · levels · badges · streaks — the engagement engine</p>
+  <h1>Achievement <em>System</em></h1>
+  <p class="sub">Badges are permanent — once earned, always displayed. XP is earned by effort: showing up, passing gates, logging papers, drilling questions. The system rewards the behaviors that get you into a doctorate, not vanity metrics.</p>
+
+  <div class="card" style="margin-top:20px">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:baseline">
+      <h3 id="lvlName" style="font-size:1.4rem;font-family:var(--font-display)">Applicant</h3>
+      <span class="small" id="lvlNext"></span>
+    </div>
+    <div class="bar" style="margin-top:10px;height:14px"><i id="lvlBar" style="width:0%"></i></div>
+    <div class="grid grid-4" style="margin-top:16px">
+      <div class="stat-card"><div class="big" id="gXp">0</div><div class="lbl">⚡ Total XP</div></div>
+      <div class="stat-card"><div class="big" id="gDays">0</div><div class="lbl">Days done / 105</div></div>
+      <div class="stat-card"><div class="big" id="gCur">0</div><div class="lbl">🔥 Current streak</div></div>
+      <div class="stat-card"><div class="big" id="gBest">0</div><div class="lbl">🏆 Best streak</div></div>
+    </div>
+  </div>
+
+  <h2>Streak <em>Calendar</em> <span class="small">— all 105 days · green = done · gold ring = today</span></h2>
+  <div class="card"><div id="calendar" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:6px"></div>
+    <p class="small" style="margin-top:12px">🛡️ <b>Grace rule:</b> one missed day per week freezes the streak; two consecutive missed days breaks it. Showing up matters more than session length.</p>
+  </div>
+
+  <h2>Quiz <em>Scoreboard</em></h2>
+  <div class="card">
+    <canvas id="quizChart" height="120"></canvas>
+    <p class="small" style="margin-top:8px">Gold line = the 80% PSU gate. Every bar above it is a passed module.</p>
+  </div>
+
+  <h2>XP <em>Sources</em></h2>
+  <div class="card"><canvas id="xpChart" height="110"></canvas></div>
+
+  <h2 id="badges-h">Badge <em>Wall</em> <span class="small" id="badgeCount"></span></h2>
+  <div id="badgeWall"></div>
+
+  <h2>Danger <em>Zone</em></h2>
+  <div class="card">
+    <p class="small">Export your progress as a backup, import it on another device, or wipe everything and start over.</p>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn small ghost" onclick="exportState()">⬇ Export progress (JSON)</button>
+      <button class="btn small ghost" onclick="document.getElementById('importFile').click()">⬆ Import progress</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importState(this)">
+      <button class="btn small danger" onclick="resetAll()">🗑 Reset everything</button>
+    </div>
+  </div>
+
+  <footer>Every badge here is a sentence in your Fall 2027 statement of purpose.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const TIER_ORDER = ["bronze", "silver", "gold", "diamond"];
+const TIER_LABEL = { bronze: "🥉 Bronze — Foundation", silver: "🥈 Silver — Mastery", gold: "🥇 Gold — Milestones", diamond: "💎 Diamond — Legend" };
+let quizChart, xpChart;
+
+function render() {
+  const s = STATE, xp = totalXP(s);
+  const { lvl, next } = levelOf(xp);
+  document.getElementById("gXp").textContent = xp.toLocaleString();
+  document.getElementById("gDays").textContent = doneDays(s);
+  document.getElementById("gCur").textContent = currentStreak(s);
+  document.getElementById("gBest").textContent = bestStreak(s);
+  document.getElementById("lvlName").textContent = "Level: " + lvl.name;
+  if (next) {
+    const span = next.xp - lvl.xp, into = xp - lvl.xp;
+    document.getElementById("lvlBar").style.width = Math.min(100, into / span * 100) + "%";
+    document.getElementById("lvlNext").textContent = `${(next.xp - xp).toLocaleString()} XP to ${next.name}`;
+  } else {
+    document.getElementById("lvlBar").style.width = "100%";
+    document.getElementById("lvlNext").textContent = "Maximum level reached 👑";
+  }
+
+  // calendar
+  const t = todayDayNumber();
+  document.getElementById("calendar").innerHTML = [...Array(TOTAL_DAYS)].map((_, i) => {
+    const d = i + 1, done = !!s.days[d];
+    return `<div title="Day ${d} · ${fmtDate(dateOfDay(d))}" onclick="commit(st => st.days[${d}] = !st.days[${d}])"
+      style="cursor:pointer;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;
+      font-size:.62rem;color:${done ? "#0b1020" : "var(--ink-dim)"};
+      background:${done ? "var(--ok)" : "var(--bg2)"};
+      border:2px solid ${d === t ? "var(--gold)" : "var(--line)"}">${d}</div>`;
+  }).join("");
+
+  // badge wall
+  const earned = new Set(earnedBadges(s).map(b => b.id));
+  document.getElementById("badgeCount").textContent = `— ${earned.size} of ${BADGES.length} earned`;
+  document.getElementById("badgeWall").innerHTML = TIER_ORDER.map(tier => {
+    const list = BADGES.filter(b => b.tier === tier);
+    return `<h3 style="margin:22px 0 10px">${TIER_LABEL[tier]}</h3>
+      <div class="badge-grid">${list.map(b => `
+        <div class="badge ${earned.has(b.id) ? "earned" : ""}">
+          <span class="tier ${tier}">${tier}</span>
+          <div class="b-icon">${b.icon}</div>
+          <div class="b-name">${b.name}</div>
+          <div class="b-desc">${b.desc}</div>
+        </div>`).join("")}</div>`;
+  }).join("");
+
+  drawCharts(s);
+}
+
+function drawCharts(s) {
+  const labels = [], scores = [], colors = [];
+  COURSES.forEach(c => [1,2,3,4,5].forEach(m => {
+    labels.push(`${c.icon}M${m}`);
+    const v = s.quizzes[c.id + "_m" + m];
+    scores.push(v ?? 0);
+    colors.push(v == null ? "#263259" : v >= 80 ? c.color : "#fc5c65");
+  }));
+  const gate = { type: "line", label: "80% gate", data: labels.map(() => 80), borderColor: "#f7b731", borderDash: [6,4], pointRadius: 0, borderWidth: 2 };
+  if (quizChart) quizChart.destroy();
+  quizChart = new Chart(document.getElementById("quizChart"), {
+    data: { labels, datasets: [{ type: "bar", label: "Quiz %", data: scores, backgroundColor: colors, borderRadius: 4 }, gate] },
+    options: { plugins: { legend: { display: false } },
+      scales: { y: { min: 0, max: 100, grid: { color: "#263259" }, ticks: { color: "#9aa7cc" } },
+                x: { grid: { display: false }, ticks: { color: "#9aa7cc", font: { size: 9 } } } } }
+  });
+
+  const src = {
+    "Plan days": doneDays(s) * XP.day,
+    "Quizzes": Object.values(s.quizzes).reduce((a, v) => a + (v >= 80 ? XP.quizPass : 0) + (v >= 90 ? XP.quizAce : 0), 0),
+    "Modules": Object.values(s.modules).filter(Boolean).length * XP.moduleGate,
+    "Practice": (s.practice.correct || 0) * XP.practiceCorrect,
+    "Papers": (s.papers || []).length * XP.paper,
+    "Summaries": Object.values(s.summaries || {}).filter(Boolean).length * XP.summary,
+    "Outside practice": Object.values(s.outside || {}).filter(Boolean).length * XP.outside
+  };
+  if (xpChart) xpChart.destroy();
+  xpChart = new Chart(document.getElementById("xpChart"), {
+    type: "bar",
+    data: { labels: Object.keys(src),
+      datasets: [{ data: Object.values(src), backgroundColor: ["#2ecc71","#f7b731","#45aaf2","#4ecdc4","#a55eea","#fc5c65","#7ee8fa"], borderRadius: 4 }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: "#263259" }, ticks: { color: "#9aa7cc" } },
+                y: { grid: { display: false }, ticks: { color: "#9aa7cc" } } } }
+  });
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(STATE, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "lomon-academy-progress.json";
+  a.click();
+}
+function importState(input) {
+  const f = input.files[0]; if (!f) return;
+  f.text().then(txt => {
+    try {
+      const obj = JSON.parse(txt);
+      localStorage.setItem(LS_KEY, JSON.stringify(obj));
+      STATE = loadState();
+      render(); updateNavXP();
+      toast("✅ Progress imported.");
+    } catch (e) { toast("That file doesn't look like a valid backup."); }
+  });
+}
+function resetAll() {
+  if (!confirm("Wipe ALL progress? This cannot be undone. (Export a backup first!)")) return;
+  localStorage.removeItem(LS_KEY);
+  STATE = loadState();
+  render(); updateNavXP();
+  toast("Fresh start. Day 1 awaits.");
+}
+function onStateChange() { render(); }
+document.addEventListener("DOMContentLoaded", render);
+</script>
+</body>
+</html>

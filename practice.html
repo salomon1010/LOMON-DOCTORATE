@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice Arena — Lomon Doctorate Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="kicker">zyBook-style · randomized every time · instant feedback</p>
+  <h1>The <em>Practice Arena</em></h1>
+  <p class="sub">Like a zyBook Challenge Activity: numbers change on every question, so you can't memorize answers — only understanding survives. Every correct answer earns +2 XP. Explanations tie each concept back to enterprise AI and your D.Eng. comeback.</p>
+
+  <div class="grid grid-4" style="margin:18px 0">
+    <div class="card stat-card"><div class="big" id="aTotal">0</div><div class="lbl">Answered (all time)</div></div>
+    <div class="card stat-card"><div class="big" id="aAcc">–</div><div class="lbl">Accuracy</div></div>
+    <div class="card stat-card"><div class="big" id="aSession">0 / 0</div><div class="lbl">This session</div></div>
+    <div class="card stat-card"><div class="big" id="aStreakQ">0</div><div class="lbl">🔥 Answer streak</div></div>
+  </div>
+
+  <h2>Choose your <em>battlefield</em></h2>
+  <div class="grid grid-3" id="subjects"></div>
+
+  <div id="arena" style="margin-top:26px; display:none">
+    <div class="session-bar">
+      <span class="pill gold" id="modePill">Challenge Activity</span>
+      <label class="small" style="display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="guided" style="accent-color:var(--teal)"> Participation mode (show a hint before answering)
+      </label>
+      <button class="btn small ghost" onclick="nextQuestion()">Skip ↷</button>
+    </div>
+    <div class="q-card" id="qCard"></div>
+  </div>
+
+  <h2 style="margin-top:40px">Per-subject <em>record</em></h2>
+  <div class="card"><table id="recordTable"></table></div>
+
+  <footer>Accuracy above 80% over 50+ questions earns the Sharpshooter badge — the same bar PSU sets for every module quiz.</footer>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/questions.js"></script>
+<script>
+let SUBJ = null, Q = null, answered = false;
+let session = { total: 0, correct: 0 }, qStreak = 0;
+
+function renderSubjects() {
+  document.getElementById("subjects").innerHTML = SUBJECTS.map(s => {
+    const rec = STATE.practice.bySubject[s.id] || { total: 0, correct: 0 };
+    return `<button class="subject-btn ${SUBJ && SUBJ.id === s.id ? "sel" : ""}" onclick="pickSubject('${s.id}')">
+      <span style="font-size:1.5rem">${s.icon}</span>
+      <span><b>${s.name}</b><br><span class="small">${s.tag} · ${rec.total} answered</span></span>
+    </button>`;
+  }).join("");
+}
+function pickSubject(id) {
+  SUBJ = SUBJECTS.find(s => s.id === id);
+  document.getElementById("arena").style.display = "block";
+  renderSubjects();
+  nextQuestion();
+  document.getElementById("arena").scrollIntoView({ behavior: "smooth" });
+}
+function nextQuestion() {
+  if (!SUBJ) return;
+  answered = false;
+  Q = R.pick(SUBJ.gens)();
+  const guided = document.getElementById("guided").checked;
+  document.getElementById("modePill").textContent = guided ? "Participation Activity" : "Challenge Activity";
+  document.getElementById("qCard").innerHTML = `
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <span class="pill" style="color:${SUBJ.color};border-color:${SUBJ.color}66">${SUBJ.icon} ${SUBJ.name}</span>
+      <span class="small">+${XP.practiceCorrect} XP if correct</span>
+    </div>
+    <div class="q-text">${Q.q}</div>
+    ${Q.code ? `<pre class="code">${Q.code.replace(/</g,"&lt;")}</pre>` : ""}
+    ${guided ? `<div class="explain" style="margin-bottom:12px">💡 <b>Hint:</b> ${Q.explain.split(".")[0]}.</div>` : ""}
+    <div id="choices">${Q.choices.map((c, i) =>
+      `<button class="q-choice" id="ch${i}" onclick="answer(${i})">${String(c).replace(/</g,"&lt;")}</button>`).join("")}</div>
+    <div id="feedback"></div>`;
+}
+function answer(i) {
+  if (answered) return;
+  answered = true;
+  const correct = i === Q.answer;
+  session.total++;
+  if (correct) { session.correct++; qStreak++; } else qStreak = 0;
+  document.getElementById("ch" + Q.answer).classList.add("correct");
+  if (!correct) document.getElementById("ch" + i).classList.add("wrong");
+  document.getElementById("feedback").innerHTML = `
+    <div class="explain">${correct ? "✅ <b>Correct!</b>" : "❌ <b>Not quite.</b>"} ${Q.explain}</div>
+    <div style="margin-top:14px"><button class="btn" onclick="nextQuestion()">Next question →</button></div>`;
+  commit(s => {
+    s.practice.total = (s.practice.total || 0) + 1;
+    if (correct) s.practice.correct = (s.practice.correct || 0) + 1;
+    const rec = s.practice.bySubject[SUBJ.id] || { total: 0, correct: 0 };
+    rec.total++; if (correct) rec.correct++;
+    s.practice.bySubject[SUBJ.id] = rec;
+  });
+  if (correct && qStreak > 0 && qStreak % 10 === 0) { toast(`🔥 ${qStreak} correct in a row!`); burst(); }
+}
+function renderStats() {
+  const p = STATE.practice;
+  document.getElementById("aTotal").textContent = p.total || 0;
+  document.getElementById("aAcc").textContent = p.total ? Math.round(p.correct / p.total * 100) + "%" : "–";
+  document.getElementById("aSession").textContent = `${session.correct} / ${session.total}`;
+  document.getElementById("aStreakQ").textContent = qStreak;
+  document.getElementById("recordTable").innerHTML =
+    "<tr><th>Subject</th><th>Answered</th><th>Correct</th><th>Accuracy</th><th></th></tr>" +
+    SUBJECTS.map(s => {
+      const r = p.bySubject[s.id] || { total: 0, correct: 0 };
+      const acc = r.total ? Math.round(r.correct / r.total * 100) : null;
+      return `<tr><td>${s.icon} ${s.name}</td><td>${r.total}</td><td>${r.correct}</td>
+        <td>${acc == null ? "—" : acc + "%"}</td>
+        <td>${acc == null ? "" : acc >= 80 ? '<span class="pill ok">≥80 gate ✓</span>' : '<span class="pill">keep drilling</span>'}</td></tr>`;
+    }).join("");
+}
+function onStateChange() { renderStats(); renderSubjects(); }
+document.addEventListener("DOMContentLoaded", () => { renderSubjects(); renderStats(); });
+</script>
+</body>
+</html>

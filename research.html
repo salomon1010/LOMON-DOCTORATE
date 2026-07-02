@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D.Eng. Repair Track — Lomon Doctorate Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="kicker">2 hrs/week · Tue papers · Thu research ideas · runs parallel to every bridge week</p>
+  <h1>The <em>D.Eng. Repair</em> Track</h1>
+  <p class="sub">"Do not spend 15 weeks just finishing bridge courses. That would be a wasted comeback." By Week 15 this page must contain: a 3-topic research shortlist tied to your actual work, a 10–15 paper reading log, and one 2–3 page literature synthesis memo.</p>
+
+  <div class="grid grid-3" style="margin:18px 0">
+    <div class="card stat-card"><div class="big" id="rPapers">0</div><div class="lbl">📄 Papers logged (goal 10–15)</div></div>
+    <div class="card stat-card"><div class="big" id="rTopics">0 / 3</div><div class="lbl">🎯 Topic candidates defined</div></div>
+    <div class="card stat-card"><div class="big" id="rMemo">0%</div><div class="lbl">✍️ Synthesis memo</div></div>
+  </div>
+
+  <!-- ============ TOPIC SHORTLIST ============ -->
+  <h2>1 · Research Topic <em>Shortlist</em></h2>
+  <p class="sub small">Not "AI in enterprises." Three narrow candidate problems tied to your data engineering work. Seeds from your mentor below — overwrite them with your own sharper versions.</p>
+  <div class="grid grid-3" id="topics" style="margin-top:12px"></div>
+
+  <!-- ============ READING LOG ============ -->
+  <h2>2 · Paper Reading <em>Log</em> <span class="small">+40 XP each</span></h2>
+  <p class="sub small">One paper every Tuesday. For each: what problem it addresses · method used · limitation · why it matters for your future research.</p>
+
+  <div class="card" style="margin:12px 0">
+    <h3>➕ Log a paper</h3>
+    <div class="grid grid-2">
+      <div><span class="field-lbl">Title / authors / year</span><input type="text" id="npTitle" placeholder="e.g., Hidden Technical Debt in ML Systems (Sculley et al., 2015)"></div>
+      <div><span class="field-lbl">Problem it addresses</span><input type="text" id="npProblem" placeholder="What gap or pain does it target?"></div>
+      <div><span class="field-lbl">Method used</span><input type="text" id="npMethod" placeholder="Approach, experiment, framework…"></div>
+      <div><span class="field-lbl">Limitation</span><input type="text" id="npLimit" placeholder="What it can't do / where it breaks"></div>
+    </div>
+    <span class="field-lbl">Why it matters for MY research</span>
+    <input type="text" id="npWhy" placeholder="Connection to your topic candidates">
+    <div style="margin-top:12px"><button class="btn" onclick="addPaper()">Add to log (+40 XP)</button></div>
+  </div>
+
+  <div id="paperList"></div>
+
+  <details class="card" style="margin-top:14px">
+    <summary style="cursor:pointer;color:var(--gold)">📚 Starter reading list — 10 papers matched to your topic candidates</summary>
+    <table style="margin-top:10px" id="starterTable"></table>
+    <p class="small" style="margin-top:8px">Find them free on <a href="https://arxiv.org" target="_blank" rel="noopener">arXiv</a> / <a href="https://scholar.google.com" target="_blank" rel="noopener">Google Scholar</a>. Read the abstract + intro + conclusion first; skim the rest. 1 hour, one paper, one log entry.</p>
+  </details>
+
+  <!-- ============ MEMO ============ -->
+  <h2>3 · Literature Synthesis <em>Memo</em></h2>
+  <p class="sub small">Not a full paper — a serious 2–3 page start. Structure: (1) the problem space, (2) what the 10–15 papers collectively show, (3) the gap nobody has filled, (4) which of your 3 topics best attacks that gap.</p>
+  <div class="card" style="margin-top:12px">
+    <span class="field-lbl">Memo progress</span>
+    <input type="range" min="0" max="100" step="10" id="memoRange" style="width:100%;accent-color:var(--gold)">
+    <div class="bar" style="margin:8px 0"><i id="memoBar" style="width:0%"></i></div>
+    <span class="field-lbl">Working notes / outline</span>
+    <textarea id="memoNotes" rows="5" placeholder="Thesis of the memo, section outline, key citations…"></textarea>
+    <div class="task" style="margin-top:10px">
+      <input type="checkbox" id="memoDone">
+      <label for="memoDone"><b>Memo complete (2–3 pages, all four sections)</b> — unlocks the 🧬 Research Ready badge</label>
+    </div>
+    <div style="margin-top:8px"><button class="btn small ghost" onclick="saveMemo(true)">Save notes</button></div>
+  </div>
+
+  <!-- ============ ROADMAP ============ -->
+  <h2>The Road to <em>Fall 2027</em></h2>
+  <div class="timeline" id="roadmap"></div>
+
+  <div class="banner red">
+    <b>The mistake not to make:</b> finishing 15 weeks of bridge courses with nothing else to show. The courses fix eligibility. This page fixes credibility. Both, or it's a wasted comeback.
+  </div>
+
+  <footer>Every Tuesday: one paper. Every Thursday: one hour on the memo. That's the whole secret.</footer>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+function render() {
+  const s = STATE;
+  document.getElementById("rPapers").textContent = (s.papers || []).length;
+  document.getElementById("rTopics").textContent = s.topics.filter(t => t.title.trim()).length + " / 3";
+  document.getElementById("rMemo").textContent = (s.research.memoProgress || 0) + "%";
+
+  // topics
+  document.getElementById("topics").innerHTML = s.topics.map((t, i) => `
+    <div class="card" style="border-top:3px solid var(--violet)">
+      <span class="field-lbl">Candidate ${i + 1}${t.title ? "" : " · seed idea"}</span>
+      <input type="text" value="${esc(t.title)}" placeholder="${esc(TOPIC_SEEDS[i])}"
+        onchange="commit(st => st.topics[${i}].title = this.value)">
+      <span class="field-lbl">Why it's mine (tie to your actual work)</span>
+      <textarea rows="3" onchange="commit(st => st.topics[${i}].notes = this.value)"
+        placeholder="Which system at work exhibits this problem? What would you measure?">${esc(t.notes)}</textarea>
+    </div>`).join("");
+
+  // papers
+  document.getElementById("paperList").innerHTML = (s.papers || []).map((p, i) => `
+    <div class="paper-card">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+        <h4>📄 ${i + 1}. ${esc(p.title)}</h4>
+        <button class="btn small danger" onclick="if(confirm('Remove this paper?'))commit(st => st.papers.splice(${i},1))">✕</button>
+      </div>
+      <div class="paper-fields">
+        <div><b>Problem</b>${esc(p.problem) || "—"}</div>
+        <div><b>Method</b>${esc(p.method) || "—"}</div>
+        <div><b>Limitation</b>${esc(p.limit) || "—"}</div>
+        <div><b>Why it matters</b>${esc(p.why) || "—"}</div>
+      </div>
+      <div class="small" style="margin-top:6px">Logged ${p.date}</div>
+    </div>`).join("") || `<p class="small">No papers yet. Tuesday is coming.</p>`;
+
+  // starter list
+  document.getElementById("starterTable").innerHTML =
+    "<tr><th>Paper</th><th>Why it's on your list</th></tr>" +
+    READING_STARTERS.map(r => `<tr><td>${r.t}</td><td class="small">${r.why}</td></tr>`).join("");
+
+  // memo
+  document.getElementById("memoRange").value = s.research.memoProgress || 0;
+  document.getElementById("memoBar").style.width = (s.research.memoProgress || 0) + "%";
+  document.getElementById("memoNotes").value = s.research.memoNotes || "";
+  document.getElementById("memoDone").checked = !!s.research.memoDone;
+
+  // roadmap
+  document.getElementById("roadmap").innerHTML = ROADMAP_2027.map(r => `
+    <div class="tl-item ${r.key ? "key" : ""}">
+      <div class="tl-when">${r.when}</div>
+      <div class="tl-what">${r.what}</div>
+    </div>`).join("");
+}
+function esc(x) { return String(x || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+
+function addPaper() {
+  const g = id => document.getElementById(id).value.trim();
+  const title = g("npTitle");
+  if (!title) { toast("A paper needs at least a title."); return; }
+  commit(s => s.papers.push({
+    title, problem: g("npProblem"), method: g("npMethod"),
+    limit: g("npLimit"), why: g("npWhy"),
+    date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  }));
+  ["npTitle","npProblem","npMethod","npLimit","npWhy"].forEach(id => document.getElementById(id).value = "");
+  toast("📄 Paper logged! +" + XP.paper + " XP");
+}
+function saveMemo(show) {
+  commit(s => {
+    s.research.memoProgress = +document.getElementById("memoRange").value;
+    s.research.memoNotes = document.getElementById("memoNotes").value;
+    s.research.memoDone = document.getElementById("memoDone").checked;
+  });
+  if (show) toast("Saved.");
+}
+document.addEventListener("DOMContentLoaded", () => {
+  render();
+  document.getElementById("memoRange").addEventListener("change", () => saveMemo(false));
+  document.getElementById("memoNotes").addEventListener("change", () => saveMemo(false));
+  document.getElementById("memoDone").addEventListener("change", () => saveMemo(false));
+});
+function onStateChange() { render(); }
+</script>
+</body>
+</html>

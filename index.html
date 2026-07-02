@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lomon Doctorate Academy — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="kicker">Salomon · PSU Great Valley Bridge Program · Fall 2027 D.Eng. Comeback</p>
+  <h1>The <em>Command Center</em></h1>
+  <p class="sub">15 weeks. 5 bridge courses in mentor order — quantitative repair first. One parallel research track. This is not a shopping list; it's a sequenced rebuild plan.</p>
+
+  <div class="banner" id="stageBanner">
+    <b>Stage A — active now:</b> Begin <b>Statistics immediately</b>. Wait for PSU's faculty recommendation before enrolling in all 5. Do not enroll in everything at once.
+  </div>
+
+  <div class="grid grid-4" style="margin-top:22px">
+    <div class="card stat-card"><div class="big" id="stDay">–</div><div class="lbl">Plan Day / 105</div></div>
+    <div class="card stat-card"><div class="big" id="stStreak">0</div><div class="lbl">🔥 Current Streak</div></div>
+    <div class="card stat-card"><div class="big" id="stXp">0</div><div class="lbl">⚡ Total XP</div></div>
+    <div class="card stat-card"><div class="big" id="stBadges">0</div><div class="lbl">🏅 Badges</div></div>
+  </div>
+
+  <h2>Today's <em>Mission</em></h2>
+  <div class="card" id="todayCard"></div>
+
+  <h2>Course <em>Progress</em> <span class="small">— mentor order: quant repair → CS repair</span></h2>
+  <div class="grid grid-3" id="courseRings"></div>
+
+  <h2>The Two <em>Tracks</em></h2>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>🌉 Bridge Track — 6 hrs/week</h3>
+      <p class="small">3 sessions × 2 hours (Mon · Wed · Fri). One course at a time, 3 weeks each, 2-2-1 module pacing. Every course ends with a passed quiz set + a 1-page summary connecting it to enterprise AI.</p>
+      <div style="margin-top:12px"><a class="btn small" href="plan.html">Open the 15-week plan →</a></div>
+    </div>
+    <div class="card">
+      <h3>🔬 D.Eng. Repair Track — 2 hrs/week</h3>
+      <p class="small">Tue: read + log one paper. Thu: refine your research topic shortlist and literature synthesis memo. By Week 15: 3 narrow topic candidates, 10–15 logged papers, one 2–3 page memo. The bridge courses fix only one part of the problem.</p>
+      <div style="margin-top:12px"><a class="btn small teal" href="research.html">Open the repair track →</a></div>
+    </div>
+  </div>
+
+  <h2>Countdown</h2>
+  <div class="grid grid-2">
+    <div class="card stat-card"><div class="big" id="cdBridge">–</div><div class="lbl">Days until bridge block complete (Oct 18, 2026)</div></div>
+    <div class="card stat-card"><div class="big" id="cdApp">–</div><div class="lbl">Days until Fall 2027 application window</div></div>
+  </div>
+
+  <footer>Lomon Doctorate Academy · built for the comeback · progress stored locally in your browser</footer>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+function ring(color, pct, label, sub, href) {
+  const r = 40, circ = 2 * Math.PI * r, off = circ * (1 - pct);
+  return `<a class="card" href="${href}" style="text-align:center;color:var(--ink);text-decoration:none">
+    <div class="ring">
+      <svg width="92" height="92"><circle cx="46" cy="46" r="${r}" stroke="var(--bg2)" stroke-width="8" fill="none"/>
+      <circle cx="46" cy="46" r="${r}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round"
+        stroke-dasharray="${circ}" stroke-dashoffset="${off}"/></svg>
+      <div class="pct">${Math.round(pct*100)}%</div>
+    </div>
+    <div style="margin-top:8px;font-weight:600;font-size:.9rem">${label}</div>
+    <div class="small">${sub}</div></a>`;
+}
+
+function onStateChange() { render(); }
+
+function render() {
+  const s = STATE;
+  const t = todayDayNumber();
+  document.getElementById("stDay").textContent = t < 1 ? `T−${1-t}` : (t > TOTAL_DAYS ? "Done" : t);
+  document.getElementById("stStreak").textContent = currentStreak(s);
+  document.getElementById("stXp").textContent = totalXP(s).toLocaleString();
+  document.getElementById("stBadges").textContent = earnedBadges(s).length + " / " + BADGES.length;
+
+  // course rings
+  document.getElementById("courseRings").innerHTML = COURSES.map(c =>
+    ring(c.color, courseProgress(s, c.id), `${c.icon} ${c.code}`, `${c.name} · ${c.weeks}`, "courses.html#" + c.id)
+  ).join("");
+
+  // today's mission
+  const tc = document.getElementById("todayCard");
+  if (t < 1) {
+    tc.innerHTML = `<h3>Plan starts ${fmtDateLong(START_DATE)}</h3>
+      <p class="small">Pre-flight: enroll in <b>MATH 2350 Statistics</b> ($150 + $64 zyBook), email PSU for the faculty bridge-course recommendation, and set up your notes doc. Then Day 1 begins.</p>`;
+  } else if (t > TOTAL_DAYS) {
+    tc.innerHTML = `<h3>🎓 The 15-week block is over.</h3><p class="small">Move to the Nov–Dec 2026 phase of the roadmap: narrow 3 topics to 1 and expand your memo into a full literature review. See the D.Eng. Repair page.</p>`;
+  } else {
+    const wk = WEEKS[Math.floor((t - 1) / 7)];
+    const wd = (t - 1) % 7;
+    const tasks = dayTasks(wk, wd);
+    const done = !!s.days[t];
+    tc.innerHTML = `
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center">
+        <h3>Day ${t} · Week ${wk.n} · ${fmtDateLong(dateOfDay(t))}</h3>
+        <span class="pill gold">${wk.phase}</span>
+      </div>
+      <p class="small" style="margin:4px 0 10px">${wk.theme}</p>
+      <ul class="day-tasks">${tasks.map(x => `<li>▸ ${x}</li>`).join("")}</ul>
+      <div style="margin-top:14px">
+        <button class="btn ${done ? "ghost" : ""}" onclick="commit(s => s.days[${t}] = ${done ? "false" : "true"})">
+          ${done ? "↺ Un-mark today" : "✅ Mark Day " + t + " complete (+" + XP.day + " XP)"}
+        </button>
+        <a class="btn ghost" style="margin-left:8px" href="plan.html#w${wk.n}">See full week</a>
+      </div>`;
+  }
+
+  // countdowns
+  const now = new Date().setHours(0,0,0,0);
+  const end = dateOfDay(TOTAL_DAYS).getTime();
+  document.getElementById("cdBridge").textContent = Math.max(0, Math.ceil((end - now)/86400000));
+  document.getElementById("cdApp").textContent = Math.max(0, Math.ceil((REAPPLY_DATE - now)/86400000));
+}
+document.addEventListener("DOMContentLoaded", render);
+</script>
+</body>
+</html>

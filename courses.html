@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Courses — Lomon Doctorate Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="kicker">PSU Great Valley Bridge Program · mentor priority order</p>
+  <h1>Five Courses, <em>One Rebuild</em></h1>
+  <p class="sub">For each course: mark module content complete, log your quiz score (the 80% gate is real — PSU requires it to advance), then close it out with the 1-page summary and the outside-practice deliverable. Those two extras are what turn a checkbox into doctorate credibility.</p>
+
+  <div class="banner">
+    <b>Decision rule if PSU recommends only 3:</b> Statistics + Linear Algebra are locked. Third pick — if PSU says your coding background is credible → <b>Calculus</b>; if they hint CS fundamentals are weak → <b>DSA</b>. Programming only if explicitly recommended.
+  </div>
+
+  <div class="card" style="margin:16px 0">
+    <h3>💰 Cost plan</h3>
+    <table id="costTable"></table>
+    <p class="small" style="margin-top:8px">Still cheap compared with making another bad graduate application.</p>
+  </div>
+
+  <div id="courses"></div>
+
+  <footer>80% is the gate. 90%+ is the ace bonus. Log honestly — this board only works if it tells the truth.</footer>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+function render() {
+  const s = STATE;
+  document.getElementById("costTable").innerHTML =
+    "<tr><th>Item</th><th>Cost</th></tr>" +
+    COST_PLAN.map(r => `<tr class="${r.total ? "total" : ""}"><td>${r.item}</td><td>${r.cost}</td></tr>`).join("");
+
+  document.getElementById("courses").innerHTML = COURSES.map(c => {
+    const prog = courseProgress(s, c.id);
+    const isDone = courseDone(s, c.id);
+    return `<div class="card" id="${c.id}" style="margin-bottom:18px;border-left:4px solid ${c.color}">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">
+        <h3 style="font-size:1.2rem">${c.icon} ${c.order}. ${c.code} — ${c.name} ${isDone ? "✅" : ""}</h3>
+        <span class="pill gold">${c.weeks}</span>
+      </div>
+      <p class="small" style="margin:4px 0 10px"><span class="pill">${c.phase}</span> &nbsp; ${c.why}</p>
+      <p class="small">📖 ${c.zybook} · <a href="${c.url}" target="_blank" rel="noopener">official course page ↗</a> · <a href="https://support.zybooks.com/hc/en-us/categories/360004050694-Students" target="_blank" rel="noopener">zyBooks help ↗</a></p>
+      <div class="bar" style="margin:12px 0"><i style="width:${prog*100}%;background:linear-gradient(90deg,${c.color},var(--gold))"></i></div>
+
+      <table>
+        <tr><th>Module</th><th style="width:120px">Content done</th><th style="width:150px">Quiz score</th><th style="width:90px">Gate</th></tr>
+        ${c.modules.map((m, i) => {
+          const key = c.id + "_m" + (i + 1);
+          const score = s.quizzes[key];
+          return `<tr>
+            <td>${m}</td>
+            <td><input type="checkbox" ${s.modules[key] ? "checked" : ""} style="accent-color:${c.color};width:16px;height:16px"
+                 onchange="commit(st => st.modules['${key}'] = this.checked)"></td>
+            <td><input type="number" min="0" max="100" placeholder="%" value="${score ?? ""}" style="width:80px"
+                 onchange="logQuiz('${key}', this.value)"></td>
+            <td>${score == null ? "—" : score >= 90 ? '<span class="pill ok">ACE 💯</span>' : score >= 80 ? '<span class="pill ok">PASS</span>' : '<span class="pill" style="color:var(--red);border-color:var(--red)">RETRY</span>'}</td>
+          </tr>`;
+        }).join("")}
+      </table>
+
+      <div class="grid grid-2" style="margin-top:14px">
+        <div class="task ${s.summaries[c.id] ? "done" : ""}">
+          <input type="checkbox" id="sum_${c.id}" ${s.summaries[c.id] ? "checked" : ""}
+            onchange="commit(st => st.summaries['${c.id}'] = this.checked)">
+          <label for="sum_${c.id}">✍️ <b>1-page summary written:</b> “${c.summary}” (+${XP.summary} XP)</label>
+        </div>
+        <div class="task ${s.outside[c.id] ? "done" : ""}">
+          <input type="checkbox" id="out_${c.id}" ${s.outside[c.id] ? "checked" : ""}
+            onchange="commit(st => st.outside['${c.id}'] = this.checked)">
+          <label for="out_${c.id}">🛠️ <b>Outside practice done:</b> ${c.outside} (+${XP.outside} XP)</label>
+        </div>
+      </div>
+
+      <details style="margin-top:12px">
+        <summary class="small" style="cursor:pointer;color:var(--gold)">Exit questions — can you answer these out loud?</summary>
+        <ul class="day-tasks">${c.exitQs.map(q => `<li>▸ ${q}</li>`).join("")}</ul>
+      </details>
+    </div>`;
+  }).join("");
+}
+function logQuiz(key, val) {
+  const v = val === "" ? null : Math.max(0, Math.min(100, +val));
+  commit(st => { if (v == null) delete st.quizzes[key]; else st.quizzes[key] = v; });
+  if (v >= 90) toast("💯 ACE! +" + (XP.quizPass + XP.quizAce) + " XP");
+  else if (v >= 80) toast("✅ Gate passed! +" + XP.quizPass + " XP");
+  else if (v != null) toast("Below 80 — review the missed Challenge Activities and retake.");
+}
+function onStateChange() { render(); }
+document.addEventListener("DOMContentLoaded", () => {
+  render();
+  if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>15-Week Plan — Lomon Doctorate Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav id="nav"></nav>
+<main>
+  <p class="kicker">Mon Jul 6 → Sun Oct 18, 2026 · one course at a time · 8 hrs/week</p>
+  <h1>The <em>15-Week</em> Bridge Block</h1>
+  <p class="sub">Mentor sequence: Statistics → Linear Algebra → Calculus → Programming → DSA. Each course gets 3 weeks with 2-2-1 module pacing. Weekly rhythm: Mon/Wed/Fri bridge sessions (2h) · Tue/Thu research hours · Sat practice · Sun review. Check off each day — streaks, XP and badges update everywhere.</p>
+
+  <div class="banner teal">
+    <b>Weekly template (working full-time):</b> Bridge course 6h (3 × 2h sessions) + D.Eng. repair 2h (1h papers, 1h research ideas) = <b>8 hrs/week</b>. Anything much less drags this out; much more and you'll quit when work/family pressure hits.
+  </div>
+
+  <div class="grid grid-4" style="margin:18px 0">
+    <div class="card stat-card"><div class="big" id="pDone">0</div><div class="lbl">Days complete</div></div>
+    <div class="card stat-card"><div class="big" id="pPct">0%</div><div class="lbl">Plan progress</div></div>
+    <div class="card stat-card"><div class="big" id="pStreak">0</div><div class="lbl">🔥 Streak</div></div>
+    <div class="card stat-card"><div class="big" id="pWeek">–</div><div class="lbl">Current week</div></div>
+  </div>
+  <div class="bar" style="margin-bottom:26px"><i id="pBar" style="width:0%"></i></div>
+
+  <div style="margin-bottom:14px">
+    <button class="btn small ghost" onclick="setAll(true)">Expand all</button>
+    <button class="btn small ghost" onclick="setAll(false)">Collapse all</button>
+  </div>
+
+  <div id="weeks"></div>
+
+  <footer>One missed day doesn't break the plan — two missed days breaks the streak. Show up.</footer>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const WD = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const WD_TAG = ["🌉 Bridge 2h","📄 Research 1h","🌉 Bridge 2h","🔬 Research 1h","🌉 Bridge 2h","🎯 Practice","🔁 Review"];
+
+function weekDayNumbers(w) { return [...Array(7)].map((_, i) => (w - 1) * 7 + i + 1); }
+function weekDone(s, w) { return weekDayNumbers(w).filter(d => s.days[d]).length; }
+
+function render() {
+  const s = STATE, t = todayDayNumber();
+  const dd = doneDays(s);
+  document.getElementById("pDone").textContent = dd + " / 105";
+  document.getElementById("pPct").textContent = Math.round(dd / 105 * 100) + "%";
+  document.getElementById("pBar").style.width = (dd / 105 * 100) + "%";
+  document.getElementById("pStreak").textContent = currentStreak(s);
+  document.getElementById("pWeek").textContent = (t >= 1 && t <= 105) ? "W" + Math.ceil(t / 7) : (t < 1 ? "Pre" : "Done");
+
+  const openSet = new Set(JSON.parse(sessionStorage.getItem("openWeeks") || "[]"));
+  const curW = (t >= 1 && t <= 105) ? Math.ceil(t / 7) : 0;
+  if (!sessionStorage.getItem("openWeeks") && curW) openSet.add(curW);
+
+  document.getElementById("weeks").innerHTML = WEEKS.map(wk => {
+    const c = COURSES.find(x => x.id === wk.course);
+    const dn = weekDayNumbers(wk.n);
+    const done = weekDone(s, wk.n);
+    const open = openSet.has(wk.n);
+    return `<div class="week-card ${open ? "open" : ""}" id="w${wk.n}">
+      <div class="week-head" onclick="toggleWeek(${wk.n})">
+        <span class="week-num">W${wk.n}</span>
+        <span class="week-theme"><b style="color:${c.color}">${wk.theme.split("—")[0]}</b>— ${wk.theme.split("—").slice(1).join("—")}</span>
+        <span class="week-meta">${fmtDate(dateOfDay(dn[0]))}–${fmtDate(dateOfDay(dn[6]))}</span>
+        <span class="pill ${done === 7 ? "ok" : ""}">${done}/7</span>
+      </div>
+      <div class="week-body">
+        <p class="small" style="padding:6px 6px 2px"><span class="pill gold">${wk.phase}</span> &nbsp; Block week ${wk.blockWeek}/3 of ${c.code} · <a href="courses.html#${c.id}">course page</a> · <a href="${c.url}" target="_blank" rel="noopener">official syllabus ↗</a></p>
+        ${dn.map((d, i) => {
+          const tasks = dayTasks(wk, i);
+          return `<div class="day-row ${d === t ? "today" : ""}">
+            <div class="day-title">
+              <input type="checkbox" ${s.days[d] ? "checked" : ""} onchange="commit(st => st.days[${d}] = this.checked)">
+              Day ${d} · ${WD[i]} <span class="date">${fmtDate(dateOfDay(d))}</span>
+              <span class="pill">${WD_TAG[i]}</span>
+              ${d === t ? '<span class="pill gold">TODAY</span>' : ""}
+            </div>
+            <ul class="day-tasks">${tasks.map(x => `<li>▸ ${x}</li>`).join("")}</ul>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function toggleWeek(n) {
+  const el = document.getElementById("w" + n);
+  el.classList.toggle("open");
+  const open = [...document.querySelectorAll(".week-card.open")].map(x => +x.id.slice(1));
+  sessionStorage.setItem("openWeeks", JSON.stringify(open));
+}
+function setAll(open) {
+  document.querySelectorAll(".week-card").forEach(el => el.classList.toggle("open", open));
+  const arr = open ? WEEKS.map(w => w.n) : [];
+  sessionStorage.setItem("openWeeks", JSON.stringify(arr));
+}
+function onStateChange() { render(); }
+document.addEventListener("DOMContentLoaded", () => {
+  render();
+  if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+});
+</script>
+</body>
+</html>
