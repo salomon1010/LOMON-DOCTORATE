@@ -154,7 +154,7 @@ function scheduleSyncPush() {
   if (!ghConfigured() || !SYNC.auto) return;
   clearTimeout(pushTimer);
   setChip("☁️…");
-  pushTimer = setTimeout(() => syncPushNow(true), 3000); // debounce bursts of checkboxes
+  pushTimer = setTimeout(() => { pushTimer = null; syncPushNow(true); }, 3000); // debounce bursts of checkboxes
 }
 
 /* ---------- nav chip ---------- */
@@ -202,7 +202,7 @@ function renderSyncCard() {
         <p class="small" style="margin-top:8px">🔒 Stored only in this browser. Sent only to api.github.com. Use a <b>fine-grained token</b> limited to the one sync repo with <b>Contents: Read &amp; write</b> — nothing else.</p>
         <label class="small" style="display:flex;align-items:center;gap:8px;margin-top:8px">
           <input type="checkbox" id="syAuto" ${SYNC.auto ? "checked" : ""} style="accent-color:var(--teal)">
-          Auto-sync (upload 3s after changes · download on page load if GitHub is newer)
+          Auto-sync (upload 3s after changes · download on load, on tab focus, and every 60s)
         </label>
       </div>
     </div>
@@ -261,7 +261,7 @@ async function syncConnect() {
       if (repo.defaultBranch && repo.defaultBranch !== SYNC.branch) {
         SYNC.branch = repo.defaultBranch; saveSyncCfg(); renderSyncCard();
       }
-      setSyncStatus(`✅ Connected to private repo ${SYNC.owner}/${SYNC.repo} (branch ${SYNC.branch}). Use “Upload now” on this device, then “Download” on your other devices.`);
+      setSyncStatus(`✅ Connected to private repo ${SYNC.owner}/${SYNC.repo} (branch ${SYNC.branch}). Auto-sync is now fully hands-free.`);
     }
     setChip("☁️✓");
   } catch (e) { setSyncStatus("Connection failed: " + e.message, true); setChip("☁️⚠"); }
@@ -273,9 +273,25 @@ function syncDisconnect() {
   setSyncStatus("Disconnected. Token removed from this browser.");
 }
 
-/* ---------- boot ---------- */
+/* ---------- boot — fully automatic, hands-free sync ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   mountChip();
   renderSyncCard();
   if (ghConfigured() && SYNC.auto) syncPullNow({ silent: true }); // adopt remote if it's newer
 });
+
+/* pull whenever you come back to the tab (e.g., switching from phone to laptop) */
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && ghConfigured() && SYNC.auto && !syncBusy && pushTimer == null)
+    syncPullNow({ silent: true });
+});
+window.addEventListener("focus", () => {
+  if (ghConfigured() && SYNC.auto && !syncBusy && pushTimer == null)
+    syncPullNow({ silent: true });
+});
+
+/* background poll every 60s while the tab is open — picks up changes made on other devices */
+setInterval(() => {
+  if (ghConfigured() && SYNC.auto && !syncBusy && !document.hidden && pushTimer == null)
+    syncPullNow({ silent: true });
+}, 60000);

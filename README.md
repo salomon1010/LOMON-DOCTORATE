@@ -13,7 +13,7 @@ Built as a static multi-page site (no server, no build step). All progress is st
 | `courses.html` | All 5 bridge courses in mentor order, module gates, quiz score log, 1-page summaries, outside practice |
 | `practice.html` | zyBook-style Practice Arena — randomized questions for Stats, Linear Algebra, Calculus, Python, DSA + ML Math |
 | `research.html` | D.Eng. Repair Track — topic shortlist, paper reading log, literature memo, road to Fall 2027 |
-| `progress.html` | Achievement system — XP, levels, badge wall, streak calendar, charts, backup/export |
+| `progress.html` | Achievement system — XP, levels, badge wall, streak calendar, charts, GitHub Sync, backup/export |
 
 ## The plan (mentor-advised)
 
@@ -46,16 +46,16 @@ git branch -M main && git push -u origin main
 ```
 Then enable Pages in repo settings.
 
-## GitHub Sync (multi-device)
+## GitHub Sync (multi-device, fully automatic)
 
-Progress can sync to a **private GitHub repo** so your phone and laptop share the same state.
+Progress syncs to a **private GitHub repo** so your phone and laptop share the same state.
 
 1. Create a private repo (e.g. `lomon-progress`) — separate from the site repo.
 2. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → new token with access to only that repo, permission **Contents: Read & write**.
-3. On the site: **Achievements → GitHub Sync** → enter username, repo, token → *Save & test* → *Upload now*.
-4. On any other device: enter the same three values — it downloads your progress automatically.
+3. On the site: **Achievements → GitHub Sync** → enter username, repo, token → *Save & test*.
+4. On any other device: enter the same three values — done.
 
-How it works: the app writes `lomon-progress.json` to the repo via the GitHub Contents API. With auto-sync on, changes upload ~3s after you make them, and each page load pulls from GitHub if the remote copy is newer (timestamp-based). The token is stored only in that browser's localStorage and sent only to `api.github.com`. Never commit the token anywhere.
+Once connected, sync is hands-free: changes upload ~3s after you make them; the site downloads from GitHub on page load, whenever the tab regains focus, and every 60 seconds — but only when the GitHub copy is newer (timestamps prevent old devices from overwriting new work). The ☁️ chip in the nav shows status. The token is stored only in the browser's localStorage and sent only to `api.github.com`. Never commit the token anywhere.
 
 ## Notes
 

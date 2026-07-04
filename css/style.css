@@ -93,7 +93,7 @@ h3 { font-size: 1.05rem; margin-bottom: 8px; }
 .btn.small { padding: 6px 12px; font-size: .8rem; }
 .btn.teal { background: var(--teal); }
 .btn.danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
-input[type="text"], input[type="number"], input[type="url"], textarea, select {
+input[type="text"], input[type="number"], input[type="url"], input[type="password"], textarea, select {
   background: var(--bg2); border: 1px solid var(--line); color: var(--ink); border-radius: 8px;
   padding: 8px 10px; font-family: var(--font-body); font-size: .9rem; width: 100%;
 }

@@ -124,7 +124,6 @@ const GEN_LA = [
   },
   () => { // solve 2x2 system
     const x = R.int(1, 4), y = R.int(1, 4);
-    const a1=1, b1=1, a2=1, b2=-1;
     const c1 = x + y, c2 = x - y;
     return mcq(`Solve: x + y = ${c1} and x − y = ${c2}. What is x?`, x,
       [y, c1, x + 1, Math.abs(x - 1) || 5],
@@ -187,7 +186,7 @@ const GEN_CALC = [
       `Reverse power rule: raise the exponent, divide by it: ${a}x^${n+1}/${n+1} + C. Integration = accumulation (total error over time from an error rate).`);
   },
   () => { // limits
-    const c = R.int(1, 4), a = R.int(1, 3);
+    const c = R.int(1, 4);
     return mcq(`lim(x→${c}) of (x² − ${c*c})/(x − ${c}) = ?`, 2*c,
       [0, c, "undefined", c*c],
       `Factor: (x−${c})(x+${c})/(x−${c}) = x+${c} → ${2*c}. Limits formalize "what value are we approaching" — the foundation under every derivative.`);
@@ -287,7 +286,7 @@ const GEN_DSA = [
       ["dict/hash-map lookup by key", "O(1)"],
       ["sorting with an efficient comparison sort", "O(n log n)"]]);
     return mcq(`What is the time complexity of ${kind[0]}?`, kind[1],
-      ["O(1)", "O(log n)", "O(n)", "O(n²)", "O(n log n)"].filter(x => x !== kind[1]).slice(0, 3).concat([]),
+      ["O(1)", "O(log n)", "O(n)", "O(n²)", "O(n log n)"].filter(x => x !== kind[1]).slice(0, 3),
       `${kind[1]}. Big-O answers: what happens at 10× the data volume? — the question every scalable pipeline must survive.`);
   },
   () => { // stack
@@ -349,7 +348,7 @@ const GEN_ML = [
   },
   () => { // sigmoid
     return mcq(`σ(0) for the sigmoid σ(z) = 1/(1 + e⁻ᶻ) = ?`, "0.5",
-      ["0", "1", "0.5", "e"],
+      ["0", "1", "e"],
       `σ(0) = 1/(1+1) = 0.5 — the "maximally uncertain" point. Sigmoids turn scores into probabilities; the 0.5 threshold is a *choice*, not a law.`);
   },
   () => { // softmax argmax
