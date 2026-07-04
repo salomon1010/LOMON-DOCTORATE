@@ -175,10 +175,12 @@ function burst() {
 /* mutate helper: change state, persist, refresh chrome */
 function commit(fn) {
   fn(STATE);
+  STATE.updatedAt = Date.now();
   saveState(STATE);
   updateNavXP();
   checkNewBadges();
   if (typeof onStateChange === "function") onStateChange();
+  if (typeof scheduleSyncPush === "function") scheduleSyncPush(); // GitHub auto-sync
 }
 
 document.addEventListener("DOMContentLoaded", () => {

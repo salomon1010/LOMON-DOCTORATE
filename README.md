@@ -46,8 +46,19 @@ git branch -M main && git push -u origin main
 ```
 Then enable Pages in repo settings.
 
+## GitHub Sync (multi-device)
+
+Progress can sync to a **private GitHub repo** so your phone and laptop share the same state.
+
+1. Create a private repo (e.g. `lomon-progress`) — separate from the site repo.
+2. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → new token with access to only that repo, permission **Contents: Read & write**.
+3. On the site: **Achievements → GitHub Sync** → enter username, repo, token → *Save & test* → *Upload now*.
+4. On any other device: enter the same three values — it downloads your progress automatically.
+
+How it works: the app writes `lomon-progress.json` to the repo via the GitHub Contents API. With auto-sync on, changes upload ~3s after you make them, and each page load pulls from GitHub if the remote copy is newer (timestamp-based). The token is stored only in that browser's localStorage and sent only to `api.github.com`. Never commit the token anywhere.
+
 ## Notes
 
-- Progress is per-browser. Use **Achievements → Export progress** to back up or move devices.
+- Without sync, progress is per-browser. **Achievements → Export progress** still works as a manual backup.
 - To change the start date, edit `START_DATE` in `js/data.js`.
 - Charts load from the Chart.js CDN (progress page only); everything else is fully offline.
