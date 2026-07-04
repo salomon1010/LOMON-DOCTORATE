@@ -39,7 +39,10 @@ function ghHeaders() {
   return { "Authorization": "Bearer " + SYNC.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
 }
 async function ghGetFile() {
-  const r = await fetch(ghUrl(`repos/${SYNC.owner}/${SYNC.repo}/contents/${encodeURIComponent(SYNC.path)}?ref=${encodeURIComponent(SYNC.branch)}`), { headers: ghHeaders() });
+  // cache-busting is essential: browsers cache GitHub API GETs (~60s),
+  // and a stale sha causes 409 "does not match" errors on upload
+  const bust = "&_=" + Date.now();
+  const r = await fetch(ghUrl(`repos/${SYNC.owner}/${SYNC.repo}/contents/${encodeURIComponent(SYNC.path)}?ref=${encodeURIComponent(SYNC.branch)}${bust}`), { headers: ghHeaders(), cache: "no-store" });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(await ghErr(r));
   const j = await r.json();
@@ -87,16 +90,23 @@ async function syncPushNow(silent) {
   if (!ghConfigured() || syncBusy) return;
   syncBusy = true; setChip("⏳");
   try {
-    if (SYNC.sha == null) { const f = await ghGetFile(); SYNC.sha = f ? f.sha : null; }
-    try {
-      SYNC.sha = await ghPutFile(STATE, SYNC.sha);
-    } catch (e) {
-      // sha conflict (file changed remotely) → refetch sha once and retry
-      if (String(e.message).includes("409") || /sha/i.test(e.message)) {
-        const f = await ghGetFile(); SYNC.sha = f ? f.sha : null;
+    // always fetch the CURRENT sha right before writing (never trust a cached one),
+    // and retry a few times in case another device writes in between
+    let lastErr = null, done = false;
+    for (let attempt = 0; attempt < 3 && !done; attempt++) {
+      try {
+        const f = await ghGetFile();
+        SYNC.sha = f ? f.sha : null;
         SYNC.sha = await ghPutFile(STATE, SYNC.sha);
-      } else throw e;
+        done = true;
+      } catch (e) {
+        lastErr = e;
+        const conflict = String(e.message).includes("409") || /does not match|sha/i.test(e.message);
+        if (!conflict) throw e;
+        await new Promise(res => setTimeout(res, 800 * (attempt + 1)));
+      }
     }
+    if (!done) throw lastErr;
     SYNC.lastPush = Date.now(); saveSyncCfg();
     setChip("☁️✓");
     if (!silent) toast("☁️ Progress uploaded to GitHub.");
